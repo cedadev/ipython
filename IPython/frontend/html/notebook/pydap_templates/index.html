@@ -37,11 +37,12 @@
                     <th>Last modified</th>
                 </tr>
 
-                <!-- diretories -->
+                <!-- directories -->
                 <tr py:for="dir in dirs" class="ui-widget-content">
                     <td>
                         <span class="ui-icon ui-icon-folder-collapsed" style="display: inline-block"></span>
-                        <a href="${dir}/">${dir}/</a></td><td colspan="2">
+                        <!-- need to replace : with %3A and \ with %5C so the browser knows this is a relative link, not a URL with a protocol -->
+                        <a href="${dir.replace(':', '%3A').replace('\\', '%5C')}/">${dir}/</a></td><td colspan="2">
                     </td>
                 </tr>
 
@@ -50,14 +51,14 @@
                     <td py:choose="">
                         <py:when test="file.supported">
                             <span class="ui-icon ui-icon-gear" style="display: inline-block"></span>
-                            <a href="${file.name}.html" title="Download data from ${file.name}">${file.name}</a>
+                            <a href="${file.name.replace(':', '%3A').replace('\\', '%5C')}.html" title="Download data from ${file.name}">${file.name}</a>
                         </py:when>
                         <py:otherwise>
                             <span class="ui-icon ui-icon-document" style="display: inline-block"></span>
                             ${file.name}
                         </py:otherwise>
                     </td>
-                    <td><a href="${file.name}" title="Download file ${file.name}">${file.size}</a></td> 
+                    <td><a href="${file.name.replace(':', '%3A').replace('\\', '%5C')}" title="Download file ${file.name}">${file.size}</a></td>
                     <?python
                         import time
                     ?>

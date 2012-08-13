@@ -1,7 +1,5 @@
 var IPython = (function (IPython) {
 
-    // TODO: escape : in root when sending, ie. : -> \:, \ -> \\
-
     var PydapLauncher = function () {
         this.frame = document.getElementById('pydap_frame');
         var settings = {
@@ -43,7 +41,6 @@ var IPython = (function (IPython) {
     PydapLauncher.prototype.set_path = function (root) {
         this.root = root;
         $('#pydap_path').val(root);
-        //this.home();
     };
 
     PydapLauncher.prototype.go = function () {
@@ -52,7 +49,11 @@ var IPython = (function (IPython) {
     };
 
     PydapLauncher.prototype.home = function (data) {
-        this.frame.src = '/pydap:' + this.root + ':/';
+        // separate base/root/path by :, which means we need to escape : in
+        // root (with _); and replace \ with %5C as Tornado replaces it with /
+        var root = this.root.replace(/_/g, '__').replace(/:/g, '_:')
+                            .replace(/\\/g, '%5C');
+        this.frame.src = '/pydap:' + root + ':/';
     };
 
     PydapLauncher.prototype.reload = function () {
