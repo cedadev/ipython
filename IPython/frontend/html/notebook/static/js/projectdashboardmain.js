@@ -29,6 +29,8 @@ $(document).ready(function () {
     IPython.notebook_list = new IPython.NotebookList('div#notebook_list');
     IPython.cluster_list = new IPython.ClusterList('div#cluster_list');
     IPython.login_widget = new IPython.LoginWidget('span#login_widget');
+    new IPython.PydapLauncher();
+    new IPython.WSGIApps();
 
     var interval_id=0;
     // auto refresh every xx secondes, no need to be fast,

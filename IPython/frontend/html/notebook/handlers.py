@@ -34,6 +34,8 @@ from tornado import websocket
 from zmq.eventloop import ioloop
 from zmq.utils import jsonapi
 
+from . import pydapserver
+
 from IPython.external.decorator import decorator
 from IPython.zmq.session import Session
 from IPython.lib.security import passwd_check
@@ -216,7 +218,8 @@ class ProjectDashboardHandler(AuthenticatedHandler):
             base_kernel_url=self.application.ipython_app.base_kernel_url,
             read_only=self.read_only,
             logged_in=self.logged_in,
-            login_available=self.login_available
+            login_available=self.login_available,
+            wsgi_tabs = self.application.ipython_app.wsgi_apps
         )
 
 
@@ -906,3 +909,37 @@ class FileFindHandler(web.StaticFileHandler):
         return url_path
 
 
+#-----------------------------------------------------------------------------
+# Pydap handlers
+#-----------------------------------------------------------------------------
+
+
+class PydapGetRootHandler(RequestHandler):
+
+    def get(self):
+        self.finish(jsonapi.dumps(pydapserver.server.root))
+
+
+#-----------------------------------------------------------------------------
+# Pydap handlers
+#-----------------------------------------------------------------------------
+
+
+class WSGIResetHandler(RequestHandler):
+
+    def get(self):
+        self.application.ipython_app.reset_wsgi_apps()
+        self.finish()
+
+
+class WSGIHandler(RequestHandler):
+
+    def prepare(self):
+        ident = self.request.path.split('/')[2]
+        container = self.application.ipython_app.load_wsgi_app(ident)
+        if container is None:
+            self.set_status(404)
+            self.finish('404 Not Found')
+        else:
+            container(self.request)
+            self._finished = True

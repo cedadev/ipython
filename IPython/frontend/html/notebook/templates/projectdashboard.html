@@ -26,8 +26,11 @@ data-read-only={{read_only}}
     <ul>
         <li><a href="#tab1">Notebooks</a></li>
         <li><a href="#tab2">Clusters</a></li>
+        <li><a href="#tab3">Pydap</a></li>
+{% for i, tab in enumerate(wsgi_tabs) %}
+        <li><a href="#tab{{i + 4}}">{{tab['name']}}</a></li>
+{% end %}
     </ul>
-
     <div id="tab1">
         {% if logged_in or not read_only %}
         <div id="notebook_toolbar">
@@ -68,6 +71,27 @@ data-read-only={{read_only}}
         </div>
 
     </div>
+    <div id="tab3">
+
+        <div>
+            <label>Data path: <input id="pydap_path" type="text"></label>
+            <button id="pydap_go">Go</button>
+            <span class="toolbar_buttons">
+                <button id="pydap_home">Home</button>
+                <button id="pydap_refresh">Refresh</button>
+            </span>
+        </div>
+        <iframe id="pydap_frame" width="100%" height="600px"></iframe>
+
+    </div>
+{% for i, tab in enumerate(wsgi_tabs) %}
+    <div id="tab{{i + 4}}">
+
+        <button class="wsgi_launch" id="wsgi_launch_{{tab['ident']}}">Launch application</button>
+        <iframe {% if tab.get('autoload', False) %}class="wsgi_frame_autoload"{% end %} id="wsgi_frame_{{tab['ident']}}" width="100%" height="{{tab.get('height', '500px')}}"></iframe>
+
+    </div>
+{% end %}
 </div>
 
 </div>
@@ -77,5 +101,7 @@ data-read-only={{read_only}}
 {% block script %}
     <script src="{{static_url("js/notebooklist.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("js/clusterlist.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script src="{{static_url("js/pydap.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script src="{{static_url("js/wsgi.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("js/projectdashboardmain.js") }}" type="text/javascript" charset="utf-8"></script>
 {% end %}

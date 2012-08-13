@@ -40,6 +40,7 @@ ioloop.install()
 
 from tornado import httpserver
 from tornado import web
+from tornado.wsgi import WSGIContainer
 
 # Our own libraries
 from .kernelmanager import MappingKernelManager
@@ -49,11 +50,12 @@ from .handlers import (LoginHandler, LogoutHandler,
     ShellHandler, NotebookRootHandler, NotebookHandler, NotebookCopyHandler,
     RSTHandler, AuthenticatedFileHandler, PrintNotebookHandler,
     MainClusterHandler, ClusterProfileHandler, ClusterActionHandler,
-    FileFindHandler,
+    FileFindHandler, PydapGetRootHandler, WSGIResetHandler, WSGIHandler
 )
 from .nbmanager import NotebookManager
 from .filenbmanager import FileNotebookManager
 from .clustermanager import ClusterManager
+from . import pydapserver
 
 from IPython.config.application import catch_config_error, boolean_flag
 from IPython.core.application import BaseIPythonApplication
@@ -126,6 +128,8 @@ class NotebookWebApplication(web.Application):
     def __init__(self, ipython_app, kernel_manager, notebook_manager, 
                  cluster_manager, log,
                  base_project_url, settings_overrides):
+        pydapserver.server = pydapserver.Server(ipython_app.pydap_path)
+        pydap = WSGIContainer(pydapserver.server)
         handlers = [
             (r"/", ProjectDashboardHandler),
             (r"/login", LoginHandler),
@@ -146,6 +150,10 @@ class NotebookWebApplication(web.Application):
             (r"/clusters", MainClusterHandler),
             (r"/clusters/%s/%s" % (_profile_regex, _cluster_action_regex), ClusterActionHandler),
             (r"/clusters/%s" % _profile_regex, ClusterProfileHandler),
+            (r"/pydapgetroot", PydapGetRootHandler),
+            (r"/pydap.*", web.FallbackHandler, {'fallback': pydap}),
+            (r"/wsgireset", WSGIResetHandler),
+            (r"/wsgi/([^/]+)(/.*)?", WSGIHandler)
         ]
 
         # Python < 2.6.5 doesn't accept unicode keys in f(**kwargs), and
@@ -352,6 +360,31 @@ class NotebookApp(BaseIPythonApplication):
         When disabled, equations etc. will appear as their untransformed TeX source.
         """
     )
+
+    wsgi_apps = List(Dict, config = True,
+        help = """A list of of WSGI applications to load in notebook tabs.
+
+        Each application is a dict with the following keys:
+
+        module: the import path to the WSGI application's module.
+        application: the name of the application's function within the module.
+        factory [optional, default = False]: whether `application` is actually
+            a function that can be called to return a WSGI application, rather
+            than the application itself.  If so, a new application is created
+            on each page load.
+        factory_args [optional, default = ()]: arguments to pass to `factory`
+            when calling it.
+        ident [optional, default = a sequential number]: this is used in the
+            URL the application can be accessed at (/wsgi/ident).
+        autoload [optional, default = False]: load the application when the
+            page is loaded, without needing to click a button first.
+        height [optional, default = '500px']: the height of the application's
+            iframe, with units.
+        """)
+
+    pydap_path = Unicode(os.path.expanduser(u'~'), config=True,
+                         help="Initial Pydap data path.")
+
     def _enable_mathjax_changed(self, name, old, new):
         """set mathjax url to empty if mathjax is disabled"""
         if not new:
@@ -433,6 +466,48 @@ class NotebookApp(BaseIPythonApplication):
                 nbdir = os.path.dirname(f)
             self.config.NotebookManager.notebook_dir = nbdir
 
+    def load_wsgi_app(self, ident):
+        """Load a registered WSGI app on demand."""
+        if ident in self.loaded_wsgi_apps:
+            # already loaded
+            return self.loaded_wsgi_apps[ident]
+        if ident in self.wsgi_apps_by_ident:
+            app = self.wsgi_apps_by_ident[ident]
+            # import module
+            module = app['module']
+            try:
+                module = __import__(module)
+            except ImportError:
+                # invalid module
+                launcher = None
+            else:
+                # get launcher
+                try:
+                    launcher = getattr(module, app['application'])
+                except AttributeError:
+                    # invalid launcher
+                    launcher = None
+                # create new instance if factory
+                if app.get('factory', False):
+                    launcher = launcher(*app.get('factory_args', ()))
+                launcher = WSGIContainer(launcher)
+        else:
+            # invalid ident
+            launcher = None
+        self.loaded_wsgi_apps[ident] = launcher
+        return launcher
+
+    def reset_wsgi_apps(self):
+        """Force regeneration of WSGI apps that come from app factories."""
+        apps = self.wsgi_apps_by_ident
+        loaded = self.loaded_wsgi_apps
+        rm = []
+        for ident in loaded:
+            if 'factory' in apps[ident]:
+                rm.append(ident)
+        for ident in rm:
+            del loaded[ident]
+
     def init_configurables(self):
         # force Session default to be secure
         default_secure(self.config)
@@ -446,6 +521,26 @@ class NotebookApp(BaseIPythonApplication):
         self.notebook_manager.load_notebook_names()
         self.cluster_manager = ClusterManager(config=self.config, log=self.log)
         self.cluster_manager.update_profiles()
+
+        # initialise WSGI applications
+        apps = self.wsgi_apps
+        # give identifiers to ones without them
+        idents = [app['ident'] for app in apps if 'ident' in app]
+        ident = 0
+        for app in apps:
+            if 'ident' not in app:
+                while True:
+                    s_ident = str(ident)
+                    if s_ident in idents:
+                        ident += 1
+                    else:
+                        app['ident'] = s_ident
+                        idents.append(s_ident)
+                        break
+        # make them easier to access
+        self.wsgi_apps_by_ident = dict((app['ident'], app)
+                                       for app in apps)
+        self.loaded_wsgi_apps = {}
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
