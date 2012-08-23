@@ -366,14 +366,15 @@ class NotebookApp(BaseIPythonApplication):
 
         Each application is a dict with the following keys:
 
-        module: the import path to the WSGI application's module.
-        application: the name of the application's function within the module.
+        name: the name shown on the application's tab.
+        application: the import path to the application's function, like
+            'package.module.function'.
         factory [optional, default = False]: whether `application` is actually
             a function that can be called to return a WSGI application, rather
             than the application itself.  If so, a new application is created
             on each page load.
-        factory_args [optional, default = ()]: arguments to pass to `factory`
-            when calling it.
+        factory_args [optional, default = ()]: if the application is a factory,
+            this is a list of arguments to pass when calling it.
         ident [optional, default = a sequential number]: this is used in the
             URL the application can be accessed at (/wsgi/ident).
         autoload [optional, default = False]: load the application when the
@@ -472,18 +473,21 @@ class NotebookApp(BaseIPythonApplication):
             # already loaded
             return self.loaded_wsgi_apps[ident]
         if ident in self.wsgi_apps_by_ident:
+            # get config
             app = self.wsgi_apps_by_ident[ident]
+            launcher = app['application'].split('.')
+            module = '.'.join(launcher[:-1])
+            launcher = launcher[-1]
             # import module
-            module = app['module']
             try:
                 module = __import__(module)
-            except ImportError:
+            except (ImportError, ValueError):
                 # invalid module
                 launcher = None
             else:
                 # get launcher
                 try:
-                    launcher = getattr(module, app['application'])
+                    launcher = getattr(module, launcher)
                 except AttributeError:
                     # invalid launcher
                     launcher = None
