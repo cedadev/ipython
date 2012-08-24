@@ -2088,11 +2088,12 @@ class InteractiveShell(SingletonConfigurable):
             magic_arg_s = self.var_expand(line, stack_depth)
             # Put magic args in a list so we can call with f(*a) syntax
             args = [magic_arg_s]
+            kwargs = {}
             # Grab local namespace if we need it:
             if getattr(fn, "needs_local_scope", False):
-                args.append(sys._getframe(stack_depth).f_locals)
+                kwargs['local_ns'] = sys._getframe(stack_depth).f_locals
             with self.builtin_trap:
-                result = fn(*args)
+                result = fn(*args,**kwargs)
             return result
 
     def run_cell_magic(self, magic_name, line, cell):
@@ -2568,7 +2569,7 @@ class InteractiveShell(SingletonConfigurable):
           history. For user code calling back into IPython's machinery, this
           should be set to False.
         silent : bool
-          If True, avoid side-effets, such as implicit displayhooks, history,
+          If True, avoid side-effects, such as implicit displayhooks and
           and logging.  silent=True forces store_history=False.
         """
         if (not raw_cell) or raw_cell.isspace():
@@ -2787,7 +2788,7 @@ class InteractiveShell(SingletonConfigurable):
     def enable_gui(self, gui=None):
         raise NotImplementedError('Implement enable_gui in a subclass')
 
-    def enable_pylab(self, gui=None, import_all=True):
+    def enable_pylab(self, gui=None, import_all=True, welcome_message=False):
         """Activate pylab support at runtime.
 
         This turns on support for matplotlib, preloads into the interactive
@@ -2814,7 +2815,7 @@ class InteractiveShell(SingletonConfigurable):
         # user_ns_hidden with this information.
         ns = {}
         try:
-            gui = pylab_activate(ns, gui, import_all, self)
+            gui = pylab_activate(ns, gui, import_all, self, welcome_message=welcome_message)
         except KeyError:
             error("Backend %r not supported" % gui)
             return
