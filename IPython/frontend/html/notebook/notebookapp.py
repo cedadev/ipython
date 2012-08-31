@@ -28,6 +28,7 @@ import socket
 import sys
 import threading
 import time
+import uuid
 import webbrowser
 
 # Third party
@@ -172,6 +173,7 @@ class NotebookWebApplication(web.Application):
             static_handler_class = FileFindHandler,
             cookie_secret=os.urandom(1024),
             login_url="%s/login"%(base_project_url.rstrip('/')),
+            cookie_name='username-%s' % uuid.uuid4(),
         )
 
         # allow custom overrides for the tornado web app.
