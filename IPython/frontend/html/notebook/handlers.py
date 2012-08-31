@@ -140,9 +140,10 @@ def urljoin(*pieces):
 class RequestHandler(web.RequestHandler):
     """RequestHandler with default variable setting."""
 
-    def render(*args, **kwargs):
+    def render(self, *args, **kwargs):
         kwargs.setdefault('message', '')
-        return web.RequestHandler.render(*args, **kwargs)
+        kwargs.setdefault('logo', self.application.ipython_app.logo_path)
+        return web.RequestHandler.render(self, *args, **kwargs)
 
 class AuthenticatedHandler(RequestHandler):
     """A RequestHandler with an authenticated user."""

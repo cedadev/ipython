@@ -363,6 +363,13 @@ class NotebookApp(BaseIPythonApplication):
         """
     )
 
+    logo_path = Unicode('ipynblogo.png', config=True,
+        help="""The path to the logo to use in the notebook.
+
+        This is relative to one of the static paths (see the extra_static_paths
+        option)."""
+    )
+
     wsgi_apps = List(Dict, config = True,
         help = """A list of of WSGI applications to load in notebook tabs.
 
