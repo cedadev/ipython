@@ -220,6 +220,7 @@ class ProjectDashboardHandler(AuthenticatedHandler):
             read_only=self.read_only,
             logged_in=self.logged_in,
             login_available=self.login_available,
+            pydap=self.application.ipython_app.pydap,
             wsgi_tabs = self.application.ipython_app.wsgi_apps
         )
 
@@ -918,6 +919,7 @@ class FileFindHandler(web.StaticFileHandler):
 class PydapGetRootHandler(RequestHandler):
 
     def get(self):
+        print 'get root'
         self.finish(jsonapi.dumps(pydapserver.server.root))
 
 

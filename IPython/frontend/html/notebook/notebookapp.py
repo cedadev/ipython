@@ -129,8 +129,6 @@ class NotebookWebApplication(web.Application):
     def __init__(self, ipython_app, kernel_manager, notebook_manager, 
                  cluster_manager, log,
                  base_project_url, settings_overrides):
-        pydapserver.server = pydapserver.Server(ipython_app.pydap_path)
-        pydap = WSGIContainer(pydapserver.server)
         handlers = [
             (r"/", ProjectDashboardHandler),
             (r"/login", LoginHandler),
@@ -151,11 +149,16 @@ class NotebookWebApplication(web.Application):
             (r"/clusters", MainClusterHandler),
             (r"/clusters/%s/%s" % (_profile_regex, _cluster_action_regex), ClusterActionHandler),
             (r"/clusters/%s" % _profile_regex, ClusterProfileHandler),
-            (r"/pydapgetroot", PydapGetRootHandler),
-            (r"/pydap.*", web.FallbackHandler, {'fallback': pydap}),
             (r"/wsgireset", WSGIResetHandler),
             (r"/wsgi/([^/]+)(/.*)?", WSGIHandler)
         ]
+        if ipython_app.pydap:
+            pydapserver.server = pydapserver.Server(ipython_app.pydap_path)
+            pydap = WSGIContainer(pydapserver.server)
+            handlers += [
+                (r"/pydapgetroot", PydapGetRootHandler),
+                (r"/pydap.*", web.FallbackHandler, {'fallback': pydap})
+            ]
 
         # Python < 2.6.5 doesn't accept unicode keys in f(**kwargs), and
         # base_project_url will always be unicode, which will in turn
@@ -391,6 +394,8 @@ class NotebookApp(BaseIPythonApplication):
         height [optional, default = '500px']: the height of the application's
             iframe, with units.
         """)
+
+    pydap = Bool(False, config=True, help="Enable Pydap integration.")
 
     pydap_path = Unicode(os.path.expanduser(u'~'), config=True,
                          help="Initial Pydap data path.")
