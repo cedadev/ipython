@@ -56,7 +56,6 @@ from .handlers import (LoginHandler, LogoutHandler,
 from .nbmanager import NotebookManager
 from .filenbmanager import FileNotebookManager
 from .clustermanager import ClusterManager
-from . import pydapserver
 
 from IPython.config.application import catch_config_error, boolean_flag
 from IPython.core.application import BaseIPythonApplication
@@ -153,8 +152,9 @@ class NotebookWebApplication(web.Application):
             (r"/wsgi/([^/]+)(/.*)?", WSGIHandler)
         ]
         if ipython_app.pydap:
-            pydapserver.server = pydapserver.Server(ipython_app.pydap_path)
-            pydap = WSGIContainer(pydapserver.server)
+            from . import pydapserver
+            self.pydap_server = pydapserver.Server(ipython_app.pydap_path)
+            pydap = WSGIContainer(self.pydap_server)
             handlers += [
                 (r"/pydapgetroot", PydapGetRootHandler),
                 (r"/pydap.*", web.FallbackHandler, {'fallback': pydap})

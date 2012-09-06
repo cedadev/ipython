@@ -31,7 +31,7 @@ class Server(FileServer):
         env['SCRIPT_NAME'] = url + ':' + orig_root + ':'
         return FileServer.__call__(self, env, start_response)
 
-    def _fix_root (self, root):
+    def _fix_root(self, root):
         root = abspath(expanduser(root).rstrip('/'))
         if not root:
             root = '/'

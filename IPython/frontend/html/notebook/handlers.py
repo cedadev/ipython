@@ -34,8 +34,6 @@ from tornado import websocket
 from zmq.eventloop import ioloop
 from zmq.utils import jsonapi
 
-from . import pydapserver
-
 from IPython.external.decorator import decorator
 from IPython.zmq.session import Session
 from IPython.lib.security import passwd_check
@@ -919,12 +917,11 @@ class FileFindHandler(web.StaticFileHandler):
 class PydapGetRootHandler(RequestHandler):
 
     def get(self):
-        print 'get root'
-        self.finish(jsonapi.dumps(pydapserver.server.root))
+        self.finish(jsonapi.dumps(self.application.pydap_server.root))
 
 
 #-----------------------------------------------------------------------------
-# Pydap handlers
+# WSGI handlers
 #-----------------------------------------------------------------------------
 
 
